@@ -1,1 +1,0 @@
-# my_mini_openpilot
