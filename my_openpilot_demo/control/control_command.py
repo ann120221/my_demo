@@ -1,6 +1,8 @@
 
 #保存输出控制指令
 class ControlCommand:
+    """用于存储控制指令的类"""
+
     def __init__(self):
         self.throttle = 0.0
         self.steer = 0.0
