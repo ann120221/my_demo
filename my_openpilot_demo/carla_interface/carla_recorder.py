@@ -20,7 +20,7 @@ class CarlaRecorder:
 	def submit(self,image = None):
 		"""接收image数据"""
 
-		if image  is None:raise RuntimeError("recorder没有成功接受到图片")
+		if image  is None:raise RuntimeError("recorder没有成功接收到图片")
 	
 		self.save_queue.put(image)
 		self.submit_index += 1
@@ -35,7 +35,7 @@ class CarlaRecorder:
 	def set_recording_files(self,sensor_name = None):
 		"""创建文件和线程"""
 
-		self.save_queue = queue.Queue(maxsize=1400)
+		self.save_queue = queue.Queue()
 		self.frame_index = 0
 		self.sensor_name = sensor_name
 

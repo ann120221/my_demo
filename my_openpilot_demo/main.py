@@ -17,7 +17,7 @@ def main():
 	#启动进程和相机
 	carInterface1.start_recoding()
 
-	for _ in range(1500):
+	for _ in range(800):
 		vehicle_state1,reference_path = carInterface1.update()
 		command = controller1.update(vehicle_state1,reference_path)
 		carInterface1.send_control(command)
@@ -26,7 +26,7 @@ def main():
 
 
 
-	print(f"控制结束，控制车辆停止")
+	print(f"循环结束，开始控制车辆停止")
 	stopcommand = ControlCommand()
 	stopcommand.brake = 1.0 
 	stopcommand.throttle = 0.0 
@@ -38,12 +38,14 @@ def main():
 
 		if vehicle_speed1 < 0.05:
 			carInterface1.stop_recording()
-			carInterface1.switch_synchronous_mode(False)
 			break
-		else:
-			carInterface1.send_control(stopcommand)
-			carInterface1.frame_recoder()
-			carInterface1.step()
+		
+		carInterface1.send_control(stopcommand)
+		carInterface1.step()
+		carInterface1.frame_recoder()
+			
+	carInterface1.step()
+	carInterface1.frame_recoder()
 
 
 

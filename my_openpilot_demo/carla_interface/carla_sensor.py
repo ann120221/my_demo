@@ -7,7 +7,7 @@ class Sensor:
 	def __init__(self, world = None,vehicle = None):
 		"""获取世界及车辆"""
 
-		self.record_camera1_queue = queue.Queue()
+		self.record_camera1_queue = queue.Queue(maxsize=800)
 
 		if vehicle is None:
 			raise RuntimeError("车辆没有生成，无法记录")
