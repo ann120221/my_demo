@@ -11,9 +11,13 @@ def main():
 	controller1 = Controller()
 	carInterface1 = CarInterface()
 
+	#开启同步模式
 	carInterface1.switch_synchronous_mode(True)
 
-	for _ in range(500):
+	#启动进程和相机
+	carInterface1.start_recoding()
+
+	for _ in range(1500):
 		vehicle_state1,reference_path = carInterface1.update()
 		command = controller1.update(vehicle_state1,reference_path)
 		carInterface1.send_control(command)

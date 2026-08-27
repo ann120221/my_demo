@@ -1,98 +1,96 @@
-import carla
+
+#获取文件当前路径
 from pathlib import Path
+#系统时间
 from datetime import datetime
+#队列
 import queue
 import subprocess
 
 import shutil
 
+#线程
+import threading
+
 class CarlaRecorder:
+	"""负责取得数据，把数据存在磁盘里"""
+	def __init__(self):
+		self.submit_index = 0
 
-	def __init__(self, world = None,vehicle = None):
-		#定义存放照片的变量
-		self.image_queue = queue.Queue()
+	def submit(self,image = None):
+		"""接收image数据"""
 
-		if vehicle is None:
-			raise RuntimeError("车辆没有生成，无法记录")
-		else:self.vehicle = vehicle
+		if image  is None:raise RuntimeError("recorder没有成功接受到图片")
+	
+		self.save_queue.put(image)
+		self.submit_index += 1
 
-		if world is None:
-			raise RuntimeError("没有获取到对应,cara世界")
-		else:
-			self.world1 = world
-			blueprint_library=self.world1.get_blueprint_library()
+		if self.submit_index % 50 == 0:
+			print(
+				f"已提交:{self.submit_index}, "
+				f"已保存:{self.frame_index}, "
+				f"队列积压:{self.save_queue.qsize()}"
+			)
 
-			#设置记录用相机的生成类型
-			self.record_camera_blueprint = blueprint_library.find("sensor.camera.rgb")
-			self.record_camera_blueprint.set_attribute("role_name","record_camera1")
-			self.record_camera_blueprint.set_attribute("fov","90")
-			self.record_camera_blueprint.set_attribute("image_size_x","960")
-			self.record_camera_blueprint.set_attribute("image_size_y","540")
-			self.record_camera_blueprint.set_attribute("sensor_tick","0.05")
+	def set_recording_files(self,sensor_name = None):
+		"""创建文件和线程"""
 
+		self.save_queue = queue.Queue(maxsize=1400)
+		self.frame_index = 0
+		self.sensor_name = sensor_name
 
-
-	def start_recording(self):
-		"""初始化并开始记录"""
-
-		#确定文件路径
-		project_root = Path(__file__).resolve().parent.parent
-
-		#定义保存文件
+		#定义保存文件的名字
 		time_str = datetime.now().strftime("%m%d_%H%M%S")
 		experiment_name = f"{time_str}experiment"
-		experiment_dir = project_root / "recordings" / experiment_name
-		frame_dir = experiment_dir / "frames"
 
-		#创建文件
+		#定义保存路径
+		project_root = Path(__file__).resolve().parent.parent
+		experiment_dir = project_root / "recordings" / experiment_name
+		sensor_dir = experiment_dir / "sensors" / self.sensor_name
+		frame_dir = sensor_dir / "frames"
+
+
+		self.sensor_dir = sensor_dir
+		self.frame_dir = frame_dir
+
+		#创建实验目录
 		frame_dir.mkdir(
 			parents = True,
 			exist_ok = True 
 		)
 
-		self.expriment = experiment_dir
-		self.frame_dir = frame_dir
-		self.frame_index = 0
-
-		#设置生成相机相对于车的变换。因为生成的时候会进行绑定，所以要写相对位置
-		record_camera_transform = carla.Transform(
-			carla.Location(
-				x = -20,
-				y = 0,
-				z = + 3
-			),
-			carla.Rotation(
-				pitch =+10,
-				yaw = 0,
-				roll = 0
-			)
+		#创建保存线程
+		self.save_thread = threading.Thread(
+			target = self.save_worker
 		)
 
-		#生成相机
-		self.record_camera = self.world1.spawn_actor(
-			self.record_camera_blueprint,
-			record_camera_transform,
-			attach_to = self.vehicle,
-			attachment_type = carla.AttachmentType.SpringArmGhost
-		)
 
-		self.record_camera.listen(self.image_queue.put)
+	def save_worker(self):
+		"""获取save_queue中的image并保存为png图片"""
+
+		while(True):
+			#定义保存文件名及路径
+			file_name = (f"{self.frame_index:06d}.png")
+			file_path = self.frame_dir / file_name
+
+			#获取图片并保存
+			image = self.save_queue.get()
+
+			#当读取到save_queue中的None后退出循环
+			if image is None:
+				break
+			else:
+				image.save_to_disk(str(file_path))
+
+			self.frame_index += 1
+
+	def start_recodering(self):
+		"""启动用于保存图片的后台进程"""
+
+		self.save_thread.start()
 
 
-	def record_frame(self):
-		"""获取queue中的image并保存为png图片"""
 
-		#定义保存文件名及路径
-		file_name = (f"{self.frame_index:06d}.png")
-		file_path = self.frame_dir / file_name
-
-		#获取图片并保存
-		image = self.image_queue.get()
-		image.save_to_disk(str(file_path))
-
-		self.frame_index += 1
-
-		return image
 
 	def stop_recording(self):
 		"""把图片合成为视频并停止记录"""
@@ -101,15 +99,17 @@ class CarlaRecorder:
 			raise RuntimeError(
 			"未检测到 ffmpeg,请先安装:apt install -y ffmpeg"
 			)
-		self.record_camera.stop()
-		self.record_camera.destroy()
+
+		#在停止相机的基础上停止后台线程，绝对不要直接销毁相机
+		self.save_queue.put(None)
+		self.save_thread.join()
 
 		if self.frame_index == 0:
 			print("没有录像帧，无法生成视频")
 			return
 
 		# 设置视频输出位置
-		video_path = self.expriment / "demo.mp4"
+		video_path = self.sensor_dir / "demo.mp4"
 
 		# 图片序列格式
 		input_path = self.frame_dir / "%06d.png"

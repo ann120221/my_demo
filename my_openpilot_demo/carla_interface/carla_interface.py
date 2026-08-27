@@ -1,5 +1,7 @@
 from vehicle_state import VehicleState
 from carla_interface.carla_client import CarlaClient
+
+from carla_interface.carla_sensor import Sensor
 from carla_interface.carla_recorder import CarlaRecorder
 
 class CarInterface:
@@ -17,13 +19,17 @@ class CarInterface:
 		self.carla_client1.create_vehicle()
 		self.carla_client1.set_spectator()
 
-		#开始记录
-		self.recorder = CarlaRecorder(
+		#初始化传感器
+		self.sensor1 = Sensor(
 			self.carla_client1.world1,
 			self.carla_client1.vehicle
 		)
-		self.recorder.start_recording()
 
+		#创建好文件夹、进程和相机
+		self.recorder = CarlaRecorder()
+		self.recorder.set_recording_files(
+			self.sensor1.set_record_camera()
+			)
 
 
 	def update(self):
@@ -49,11 +55,11 @@ class CarInterface:
 		"""发送控制命令"""
 
 		self.command = command
-		print(f"发送的控制指令如下：")
+		#print(f"发送的控制指令如下：")
 		print(f"speed:{self.vehicle_state1.speed}")
-		print(f"brake:{self.command.brake}")
-		print(f"throttle:{self.command.throttle}")
-		print(f"steer:{self.command.steer}")
+		#print(f"brake:{self.command.brake}")
+		#print(f"throttle:{self.command.throttle}")
+		#print(f"steer:{self.command.steer}")
 
 		self.carla_client1.receive_control(command)
 
@@ -69,11 +75,26 @@ class CarInterface:
 
 		self.carla_client1.switch_synchronous_mode(synchronous_mode)
 
+	def start_recoding(self):
+		"""启动进程和相机"""
+
+		self.recorder.start_recodering()
+		self.sensor1.start_camera()
+
 	def stop_recording(self):
+		"""停止相机、进程后，销毁相机"""
+		#相机停止
+		self.sensor1.stop_camera()
+
+		#停止进程并生成视频
 		self.recorder.stop_recording()
 
+		#销毁相机
+		self.sensor1.destroy_camera()
+
 	def frame_recoder(self):
-		self.recorder.record_frame()
+		"""获取当前帧的图片并传入recorder进行保存"""
+		self.recorder.submit(self.sensor1.get_image())
 
 
 
