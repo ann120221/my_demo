@@ -2,3 +2,5 @@
 __pycache__/
 *.pyc
 my_openpilot_demo/recordings/my_openpilot_demo/recordings/
+__pycache__/
+*.pyc
