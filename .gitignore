@@ -8,3 +8,7 @@ __pycache__/
 *.pyc
 __pycache__/
 *.pyc
+__pycache__/
+*.pyc
+*.mp4
+my_openpilot_demo/recordings/

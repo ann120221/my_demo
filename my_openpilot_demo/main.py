@@ -43,9 +43,6 @@ def main():
 		carInterface1.send_control(stopcommand)
 		carInterface1.step()
 		carInterface1.frame_recoder()
-			
-	carInterface1.step()
-	carInterface1.frame_recoder()
 
 
 

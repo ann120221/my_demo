@@ -78,7 +78,7 @@ class CarInterface:
 	def start_recoding(self):
 		"""启动进程和相机"""
 
-		self.recorder.start_recodering()
+		self.recorder.start_recoding()
 		self.sensor1.start_camera()
 
 	def stop_recording(self):
